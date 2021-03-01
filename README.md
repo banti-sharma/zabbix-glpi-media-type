@@ -1,0 +1,1 @@
+# zabbix-glpi-media-type
