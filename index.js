@@ -19,7 +19,7 @@ var Helpdesk = {
 
         request.AddHeader('Content-Type: application/json');
         request.AddHeader('Session-Token: ' + Helpdesk.params.session_token);
-        request.AddHeader('App-Token: ' + Helpdesk.params.helpdesk_api_token);
+        request.AddHeader('App-Token: ' + Helpdesk.params.helpdesk_app_token);
        
         Zabbix.Log(4, '[Helpdesk Webhook] Sending request: ' + url + ((typeof data === 'string') ? (' ' + data) : ''));
 
@@ -77,8 +77,8 @@ var Helpdesk = {
         var url = Helpdesk.params.helpdesk_url + '/initSession';
         var request = new CurlHttpRequest();
         request.AddHeader('Content-Type: application/json');
-        request.AddHeader('Authorization: ' + Helpdesk.params.helpdesk_personal_token);
-        request.AddHeader('App-Token: ' + Helpdesk.params.helpdesk_api_token);
+        request.AddHeader('Authorization: ' + Helpdesk.params.helpdesk_user_token);
+        request.AddHeader('App-Token: ' + Helpdesk.params.helpdesk_app_token);
 
         var response = request.Get(url);
         
@@ -108,7 +108,7 @@ var Helpdesk = {
         var request = new CurlHttpRequest();
         request.AddHeader('Content-Type: application/json');
         request.AddHeader('Session-Token: ' + Helpdesk.params.session_token);
-        request.AddHeader('App-Token: ' + Helpdesk.params.helpdesk_api_token);
+        request.AddHeader('App-Token: ' + Helpdesk.params.helpdesk_app_token);
         Zabbix.Log(4, '[Helpdesk Webhook] Killing helpdesk session: ' + url);
         var response = request.Get(url);
         Zabbix.Log(4, '[Helpdesk Webhook] Helpdesk Session Killed' + request.Status() + '. ' + response);
