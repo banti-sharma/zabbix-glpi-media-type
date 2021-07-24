@@ -1,4 +1,4 @@
-const Helpdesk = {
+var Helpdesk = {
     params: {},
     sessions: {},
     setParams: function (params) {
@@ -98,7 +98,6 @@ const Helpdesk = {
             }
             throw message + '. Check debug log for more information.';
         } else {
-            console.log(response);
             Zabbix.Log(4, '[Helpdesk Webhook] Helpdesk Session Created:' + request.Status() + '. Id:' + JSON.stringify(response));
             response = JSON.parse(response);
             Helpdesk.params.session_token = response.session_token;
@@ -222,14 +221,12 @@ const Helpdesk = {
             Helpdesk.setParams(params);
 
             // Create issue for non trigger-based events.
-            if (params.event_source !== '0' && params.event_value !== '0') {
-                await Helpdesk.createIssue();
-            }
-            // Create issue for trigger-based events.
-            else if (params.event_value === '1' && update.status === '0') {
+            // Create issue for non trigger-based events.
+            if ((params.event_source !== '0' && params.event_value !== '0')
+                || params.event_value === '1' && update.status === '0') {
                 var _helpdesk_ticket_id = await Helpdesk.createIssue();
                 result.tags._helpdesk_ticket_id = _helpdesk_ticket_id;
-                result.tags._helpdesk_ticketlink = params.helpdesk_url;
+                result.tags._helpdesk_ticketlink = params.helpdesk_base_url + 'front/ticket.form.php?id=' + _helpdesk_ticket_id;
                 //      (params.helpdesk_url.endsWith('/') ? '' : '/') + 'agent/tickets/' + key;
             }
             // Update created issue for trigger-based event.

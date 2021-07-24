@@ -12,19 +12,22 @@ global.CurlHttpRequest = CurlHttpRequest;
 (async function () {
     try {
         await helpdesk.createOrUpdateTicket(JSON.stringify({
-            helpdesk_solution_id: '0',
-            helpdesk_url: 'http://localhost/graphoun-helpdesk/apirest.php',
-            helpdesk_app_token: 'PJYaHFZBlLl3mvbzXbMCcSRmDVjBSZzmq9iWCP8e',
-            helpdesk_ticket_type: '5',
-            event_nseverity: '1',
+
             event_id: '1',
             event_name: 'Graphoun Server disconnected',
-            host_name: 'graphoun-server',
-            event_value: '1',
+            event_nseverity: '1',
             event_source: '1',
-            helpdesk_user_token: 'user_token DrKso89zY0fbwEa9iwMEQTo1AazJkVAFZ2cTS2xu',
+            event_tags: {},
+            event_update_message: '',
+            event_update_status: '',
+            event_value: '1',
+            helpdesk_app_token: 'PJYaHFZBlLl3mvbzXbMCcSRmDVjBSZzmq9iWCP8e',
             helpdesk_entities_id: '0',
-            event_update_status: '0',
+            helpdesk_solution_id: '0',
+            helpdesk_ticket_type: '5',
+            helpdesk_url: 'http://localhost/graphoun-helpdesk/apirest.php',
+            helpdesk_user_token: 'user_token DrKso89zY0fbwEa9iwMEQTo1AazJkVAFZ2cTS2xu',
+            host_name: 'graphoun-server',
         }));
     } catch (error) {
         console.log('Request failed');
