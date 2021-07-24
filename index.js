@@ -132,7 +132,7 @@ var Helpdesk = {
                 impact: Helpdesk.params.event_nseverity,
                 priority: Helpdesk.params.priority,
                 name: '[HMS - ' + Helpdesk.params.event_id + '] - ' + Helpdesk.params.event_name + ' - ' + Helpdesk.params.host_name,
-                content: 'Ticket open by HMS Server\n Event: ' + Helpdesk.params.event_name + '\n Host: ' + Helpdesk.params.host_name,
+                content: Helpdesk.params.alert_message,
             }]
         };
 
@@ -156,7 +156,7 @@ var Helpdesk = {
                 items_id: Helpdesk.params.helpdesk_ticket_id,
                 solutiontypes_id: Helpdesk.params.helpdesk_solution_id,
                 status: 3,
-                content: "Problem Solved in HMS Server"
+                content: Helpdesk.params.alert_message,
             }]
         };
         await Helpdesk.request('post', '/itilsolution/' + Helpdesk.params.helpdesk_ticket_id, data);
@@ -166,8 +166,10 @@ var Helpdesk = {
 
         try {
             var params = JSON.parse(value);
-            var update = {};
             var result = { tags: {} };
+            var eventSources = { Trigger: '0', Discovery: '1', Autoregistration: '2', Internal: '3' }
+            var eventValues = { Problem: '1', Recovering: '0', }
+            var updateStatuses = { ProblemOrRecovery: '0', Update: '1' };
             var severities = [
                 { name: 'not_classified', color: '#97AAB3' },
                 { name: 'information', color: '#7499FF' },
@@ -186,24 +188,29 @@ var Helpdesk = {
 
             // Check {EVENT.VALUE} for trigger-based and internal events.
             // Possible values: 1 for problem, 0 for recovering
-            if (params.event_value !== '0' && params.event_value !== '1'
-                && (params.event_source === '0' || params.event_source === '3')) {
+            if (params.event_value !== eventValues.Recovering && params.event_value !== eventValues.Problem
+                && (params.event_source === eventSources.Trigger || params.event_source === eventSources.Internal)) {
                 throw 'Incorrect "event_value" parameter given: ' + params.event_value + '\nMust be 0 or 1.';
             }
 
             // Check {EVENT.UPDATE.STATUS} only for trigger-based events.
             // Possible values: 0 - Webhook was called because of problem/recovery event, 1 - Update operation.
-            if (params.event_source === '0' && params.event_update_status !== '0' && params.event_update_status !== '1') {
+            if (params.event_source === eventSources.Trigger
+                && params.event_update_status !== updateStatuses.ProblemOrRecovery
+                && params.event_update_status !== updateStatuses.Update) {
                 throw 'Incorrect "event_update_status" parameter given: ' + params.event_update_status + '\nMust be 0 or 1.';
             }
 
-            if (params.event_source !== '0' && params.event_value === '0') {
+            if (params.event_source !== eventSources.Trigger && params.event_value === eventValues.Recovering) {
                 throw 'Recovery operations are supported only for trigger-based actions.';
             }
 
             // helpdesk_ticket_id must be a positive integer if an update action is being performed.
-            if (params.event_source === '0' && ((params.event_value === '1' && params.event_update_status === '1')
-                || (params.event_value === '0' && (params.event_update_status === '0' || params.event_update_status === '1')))
+            if (params.event_source === eventSources.Trigger && (
+                (params.event_value === eventValues.Problem && params.event_update_status === updateStatuses.Update) ||
+                (params.event_value === eventValues.Recovering && (params.event_update_status === updateStatuses.ProblemOrRecovery || params.event_update_status === updateStatuses.Update)
+                )
+            )
                 && (isNaN(parseInt(params.helpdesk_ticket_id)) || parseInt(params.helpdesk_ticket_id) < 1)) {
                 throw 'Incorrect "helpdesk_ticket_id" parameter given: ' + params.helpdesk_ticket_id +
                 '\nMust be positive integer.';
@@ -213,7 +220,7 @@ var Helpdesk = {
                 params.event_nseverity = '7';
             }
 
-            if (params.event_value === '0') {
+            if (params.event_value === eventValues.Recovering) {
                 params.event_nseverity = '6';
             }
 
@@ -221,19 +228,26 @@ var Helpdesk = {
             Helpdesk.setParams(params);
 
             // Create issue for non trigger-based events.
-            // Create issue for non trigger-based events.
-            if ((params.event_source !== '0' && params.event_value !== '0')
-                || params.event_value === '1' && update.status === '0') {
+            if (
+                (params.event_source !== eventSources.Trigger && params.event_value !== eventValues.Recovering) ||
+                (params.event_value === eventValues.Problem && params.event_update_status === updateStatuses.ProblemOrRecovery)
+            ) {
+                Zabbix.Log(3, '[Helpdesk Webhook] Creating Ticket');
                 var _helpdesk_ticket_id = await Helpdesk.createIssue();
                 result.tags._helpdesk_ticket_id = _helpdesk_ticket_id;
                 result.tags._helpdesk_ticketlink = params.helpdesk_base_url + 'front/ticket.form.php?id=' + _helpdesk_ticket_id;
                 //      (params.helpdesk_url.endsWith('/') ? '' : '/') + 'agent/tickets/' + key;
             }
-            // Update created issue for trigger-based event.
-            else {
-                await Helpdesk.updateIssue();
+            else {// Update created issue for trigger-based event.
+                params.helpdesk_ticket_id = parseInt(params.helpdesk_ticket_id);
+                if (isNaN(params.helpdesk_ticket_id) || params.helpdesk_ticket_id < 1) {
+                    throw 'Incorrect "helpdesk_ticket_id" parameter given: ' + params.helpdesk_ticket_id +
+                    '\nMust be positive integer.';
+                } else {
+                    Zabbix.Log(3, '[Helpdesk Webhook] Updating Ticket');
+                    await Helpdesk.updateIssue();
+                }
             }
-
             return JSON.stringify(result);
         }
         catch (error) {
